@@ -1,0 +1,18 @@
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Secrets — ne jamais committer une config remplie
+.env
+*.env
+jarvis.conf.local
+
+# Artefacts audio de test
+*.mp3
+*.wav
+
+# Node (bot Telegram)
+node_modules/
+
+# Releases
+*.zip
