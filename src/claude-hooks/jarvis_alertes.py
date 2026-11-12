@@ -235,10 +235,22 @@ def _lignes_sessions(donnees: object) -> List[Tuple[str, dict]]:
     return lignes
 
 
+def _surfaces_occupees(lignes: List[Tuple[str, dict]]) -> Dict[str, set]:
+    """Surface cmux → sessions ouvertes qui l'occupent (registre K seulement : le contrat v0.4 n'a pas la surface)."""
+    occupees: Dict[str, set] = {}
+    for session_id, fiche in lignes:
+        surface = fiche.get("surface_id")
+        if isinstance(surface, str) and surface and fiche.get("ouverte") is not False and fiche.get("etat") != "inactive":
+            occupees.setdefault(surface, set()).add(session_id)
+    return occupees
+
+
 def blocages(donnees: object, maintenant: Optional[datetime] = None) -> Tuple[List[Evenement], Dict[str, str]]:
     evenements: List[Evenement] = []
     noms: Dict[str, str] = {}
-    for session_id, fiche in _lignes_sessions(donnees):
+    lignes = _lignes_sessions(donnees)
+    occupees = _surfaces_occupees(lignes)
+    for session_id, fiche in lignes:
         nom = nettoyer(fiche.get("nom"), NOM_MAX) or "sans nom"
         noms[session_id] = nom
         etat, detail = fiche.get("etat"), fiche.get("etat_detail")
@@ -256,6 +268,8 @@ def blocages(donnees: object, maintenant: Optional[datetime] = None) -> Tuple[Li
         le = lire_horodatage(le_brut)
         if cause == "processus_absent" and maintenant and le and maintenant - le > AGENT_ABSENT_OUBLIE:
             continue
+        if cause == "processus_absent" and occupees.get(fiche.get("surface_id"), set()) - {session_id}:
+            continue  # la surface porte une autre conversation (/clear, relance) : l'agent n'est pas absent
         evenements.append(Evenement(
             cle=f"{session_id}|{cause}|{le_brut}", genre=cause, session_id=session_id,
             nom=nom, le=le,
