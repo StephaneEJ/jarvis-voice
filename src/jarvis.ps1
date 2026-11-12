@@ -7,6 +7,7 @@ param(
 )
 
 $ConfPath = "$env:USERPROFILE\.claude\jarvis.conf"
+$ExtraArgs = @($args)  # options des sous-commandes (ex. jarvis alertes tick --texte)
 
 function Get-JarvisValue {
     param($Key)
@@ -242,6 +243,43 @@ switch ($Command.ToLower()) {
         }
     }
 
+    "alertes" {
+        # Annonces de blocage et de décisions en attente lues dans le Cockpit (résultat Q).
+        # jarvis alertes [point|tick|etat] [--texte] [--simuler] [--maintenant ISO]
+        $hooksDir = "$env:USERPROFILE\.claude\hooks"
+        $py = $env:JARVIS_ALERTES_PY
+        if (-not $py) { $py = "$hooksDir\jarvis_alertes.py" }
+        if (-not (Test-Path $py)) { $py = Join-Path $PSScriptRoot "claude-hooks\jarvis_alertes.py" }
+        if (-not (Test-Path $py)) { Write-Host "jarvis_alertes.py introuvable (relancer l'installateur)"; exit 1 }
+        $sous = if ($Argument) { $Argument.ToLower() } else { "point" }
+        if ($sous -notin @("point", "tick", "etat")) {
+            Write-Host "Usage : jarvis alertes [point|tick|etat] [--texte] [--simuler]"; exit 1
+        }
+        $texteSeul = $ExtraArgs -contains "--texte"
+        $options = @($ExtraArgs | Where-Object { $_ -ne "--texte" })
+        $pythonExe = $null
+        foreach ($p in @("$env:USERPROFILE\WinPython\WPy64-312101\python\python.exe",
+                         "$env:USERPROFILE\WinPython\python\python.exe")) {
+            if (Test-Path $p) { $pythonExe = $p; break }
+        }
+        foreach ($nom in @("python", "python3")) {
+            if ($pythonExe) { break }
+            $cmd = Get-Command $nom -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($cmd -and $cmd.Source -notlike "*WindowsApps*") { $pythonExe = $cmd.Source }
+        }
+        if (-not $pythonExe) { Write-Host "Python introuvable"; exit 1 }
+        $phrase = (& $pythonExe $py $sous @options) -join " "
+        if ($LASTEXITCODE -ne 0) { exit 1 }
+        if (-not $phrase) { exit 0 }
+        Write-Host $phrase
+        if ($sous -ne "etat" -and -not $texteSeul -and (Get-JarvisValue "JARVIS_ENABLED") -ne "false") {
+            $speak = "$hooksDir\_speak.ps1"
+            if (-not (Test-Path $speak)) { $speak = Join-Path $PSScriptRoot "claude-hooks\_speak.ps1" }
+            . $speak
+            Invoke-JarvisSpeak $phrase
+        }
+    }
+
     "status" {
         Write-Host ""
         Write-Host "  Jarvis — configuration actuelle"
@@ -284,6 +322,9 @@ switch ($Command.ToLower()) {
         Write-Host "  jarvis notify on|off   Activer/couper le 'j'ai besoin de toi' (permissions)"
         Write-Host "  jarvis remote on|off   Son sur iPhone uniquement (via stream)"
         Write-Host "  jarvis telegram on|off Reponses vocales envoyees sur Telegram"
+        Write-Host "  jarvis alertes         Point vocal : sessions bloquees et decisions en attente"
+        Write-Host "  jarvis alertes tick    Annonce une seule fois le nouveau (tache planifiee ou boucle)"
+        Write-Host "  jarvis alertes etat    Diagnostic, sans voix (--texte : sans voix partout)"
         Write-Host "  jarvis status          Voir la configuration actuelle"
         Write-Host ""
     }

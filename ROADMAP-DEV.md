@@ -1,13 +1,13 @@
 # ROADMAP-DEV
 
-## Où j'en suis — 12/11 01:35
+## Où j'en suis — 12/11 01:45
 Résultat : Q — alertes vocales de blocage et points périodiques, à partir du superviseur K et de la file P du Cockpit
-Lot : 1/3 — Reprise du dépôt dormant (C1 de la nuit du 12/11)
+Lot : 2/3 — Annonces bornées, déduplication et silence (C2 de la nuit du 12/11)
 Terminé quand : une session pilotée bloquée est annoncée une seule fois par `jarvis-voice`, le reste regroupé en points, rythme validé par Stéphane
-Jalons : [x] C1 reprise et roadmap [ ] C2 annonces bornées, déduplication, silence [ ] C3 tests et essai sur session de test [ ] essai vocal réel et réglage du rythme avec Stéphane
-Dernier acquis : commit 8c5de98 — renvoi « projet dormant » vers le système de développement (publié avec la branche `nuit/C1`)
-Prochaine action : C2 — lire le contrat d'interface du superviseur K et de la file P dans le Cockpit, puis écrire le lecteur borné et ses règles de silence
-Bloqué : rien ; écart entre la version installée et le dépôt, à réconcilier avec Stéphane (voir Risques ouverts)
+Jalons : [x] C1 reprise et roadmap [x] C2 annonces bornées, déduplication, silence [ ] C3 tests et essai sur session de test [ ] essai vocal réel et réglage du rythme avec Stéphane
+Dernier acquis : commit 7334833 — `jarvis alertes` (bash et PowerShell) et `jarvis_alertes.py`, 27 tests unitaires verts ; lecture réelle du registre K sans écriture
+Prochaine action : C3 — bloquer une session de test, observer le registre K, vérifier `jarvis alertes tick --texte` (une seule annonce), sans voix la nuit
+Bloqué : rien ; format de la file P provisoire tant que P n'est pas livré (A7) ; écart installé / dépôt (voir Risques ouverts)
 
 ## Objectif final
 
@@ -44,9 +44,12 @@ Bloqué : rien ; écart entre la version installée et le dépôt, à réconcili
 ## Risques ouverts
 
 - **Version installée divergente du dépôt (constaté le 12/11, lecture seule).** `~/.local/bin/jarvis` diffère de `src/jarvis.sh` (sous-commandes `lang`, `en`, `claude` et voix anglaises présentes seulement à l'installé ; `notify`, `remote`, `telegram` présentes seulement au dépôt). `_speak.sh` installé ajoute un séquenceur audio par verrou (`/tmp/jarvis_audio_lock`) et le chemin Python 3.9 ; `voice-stop.sh` installé saute l'exécution sous cron (`JARVIS_CRON=1`). `jarvis.js` est identique. `jarvis-telegram-send` n'est pas installé. Conséquence : relancer `install.sh` écraserait ces ajouts locaux. Décision de Stéphane requise avant toute réconciliation (Résultat R).
-- **Pas de tests unitaires.** `pytest` n'est pas installé pour `python3` sur le Mac : créer un dossier `tests/` ferait échouer le critère de nuit tant que l'environnement n'est pas prévu. C2 devra soit fournir des tests exécutables sans dépendance (`unittest` ou script bash), soit outiller `pytest`.
+- **Tests sans pytest.** `pytest` n'est pas installé sur le Mac : les tests vivent dans `tests-unitaires/` (bibliothèque standard, lancés par `scripts/check.sh`), pas dans `tests/`, qui ferait échouer le critère de nuit. Le critère de nuit ne les lance donc pas : seul `check.sh` les rejoue.
+- **Format de la file P provisoire.** `orchestrateur/decisions.json` est une hypothèse de `jarvis-voice` (voir `docs/ALERTES-COCKPIT.md`) ; à aligner sur le contrat de P quand il sera livré dans le Cockpit.
+- **Rythme d'appel non installé.** Aucun cron ni boucle n'appelle `jarvis alertes tick` : le rythme et les heures de silence (défaut 22-07) sont à valider avec Stéphane.
 - **Parité bash / PowerShell** (règle de `CONTRIBUTING.md`) : toute nouveauté des hooks ou de `jarvis` doit exister en `.sh` et `.ps1`, ce qui double le coût de Q.
 
 ## Décisions
 
+- 12/11/2026 — Q : cœur en Python (bibliothèque standard, déjà requis par l'installateur), sous-commande `jarvis alertes` en bash et en PowerShell qui n'en font que l'appel et la voix ; interface avec le Cockpit par lecture seule de `orchestrateur/registre.json` (ou d'une sortie `get_state_summary` v0.4) et de `orchestrateur/decisions.json`, sans code partagé.
 - 12/11/2026 — Dépôt `jarvis-voice` réactivé pour le résultat Q (autorisation de Stéphane du 12/11, contrat de nuit du Cockpit).

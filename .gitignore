@@ -16,3 +16,6 @@ node_modules/
 
 # Releases
 *.zip
+
+# Python
+__pycache__/

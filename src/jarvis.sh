@@ -206,6 +206,37 @@ case "$cmd" in
             *)   echo "Usage : jarvis notify on|off" ;;
         esac
         ;;
+    alertes)
+        # Annonces de blocage et de décisions en attente lues dans le Cockpit (résultat Q).
+        # jarvis alertes [point|tick|etat] [--texte] [--simuler] [--maintenant ISO]
+        py="${JARVIS_ALERTES_PY:-$HOME/.claude/hooks/jarvis_alertes.py}"
+        if [[ ! -f "$py" ]]; then
+            py="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/claude-hooks/jarvis_alertes.py"
+        fi
+        [[ -f "$py" ]] || { echo "jarvis_alertes.py introuvable (relancer l'installateur)"; exit 1; }
+        sous="${arg:-point}"
+        case "$sous" in
+            point|tick|etat) ;;
+            *) echo "Usage : jarvis alertes [point|tick|etat] [--texte] [--simuler]"; exit 1 ;;
+        esac
+        texte_seul=false
+        options=()
+        for option in "${@:3}"; do
+            case "$option" in
+                --texte) texte_seul=true ;;
+                *) options+=("$option") ;;
+            esac
+        done
+        phrase=$(python3 "$py" "$sous" ${options[@]+"${options[@]}"}) || exit 1
+        [[ -z "$phrase" ]] && exit 0
+        echo "$phrase"
+        if [[ "$sous" != "etat" && "$texte_seul" != "true" && "$(get JARVIS_ENABLED)" != "false" ]]; then
+            hooks_dir="$HOME/.claude/hooks"
+            [[ -f "$hooks_dir/_speak.sh" ]] || hooks_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/claude-hooks"
+            # shellcheck source=/dev/null
+            source "$hooks_dir/_speak.sh" && jarvis_speak "$phrase"
+        fi
+        ;;
     status)
         echo ""
         echo "  Jarvis — configuration actuelle"
@@ -245,6 +276,9 @@ case "$cmd" in
         echo "  jarvis notify on|off   Activer/couper le 'j'ai besoin de toi' (permissions)"
         echo "  jarvis remote on|off   Son sur iPhone uniquement (via stream)"
         echo "  jarvis telegram on|off Reponses vocales envoyees sur Telegram"
+        echo "  jarvis alertes         Point vocal : sessions bloquees et decisions en attente"
+        echo "  jarvis alertes tick    Annonce une seule fois le nouveau (cron ou boucle)"
+        echo "  jarvis alertes etat    Diagnostic, sans voix (--texte : sans voix partout)"
         echo "  jarvis status          Voir la configuration actuelle"
         echo ""
         ;;
