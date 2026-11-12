@@ -19,6 +19,7 @@ Tu peux travailler sur autre chose pendant que l'IA exécute une tâche longue, 
 - **Mode Telegram** : reçois les résumés vocaux sur ton téléphone (idéal sur VPS)
 - **Mode Remote** : stream audio vers navigateur (VPS → mobile)
 - **Bot Telegram Claude** (optionnel) : interagis avec Claude depuis Telegram
+- **Alertes du Cockpit Jarvis** : une session bloquée ou une décision en attente est annoncée une seule fois, le reste en points (voir [docs/ALERTES-COCKPIT.md](docs/ALERTES-COCKPIT.md))
 
 ## Environnements supportés
 
@@ -93,6 +94,8 @@ jarvis rate +40%       Changer le débit de parole
 jarvis transcript on   Activer le log de conversation
 jarvis telegram on     Envoyer les vocaux sur Telegram
 jarvis remote on|off   Stream audio vers navigateur (VPS)
+jarvis alertes         Point vocal : sessions bloquées et décisions en attente
+jarvis alertes tick    Annonce une seule fois ce qui est nouveau (boucle ou cron)
 jarvis aide            Liste de toutes les commandes
 ```
 
@@ -151,6 +154,8 @@ src/
   jarvis.conf                   Configuration par défaut
   jarvis-telegram-send.{sh,ps1} Envoi messages/vocaux Telegram
   claude-hooks/                 Hooks Claude Code (TTS, erreurs, permissions, résumés)
+                                et jarvis_alertes.py (alertes du Cockpit)
+tests-unitaires/                Tests sans dépendance (python3 -m unittest)
   telegram-bot/                 Déploiement bot Telegram Claude (Linux)
 ```
 

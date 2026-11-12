@@ -301,9 +301,9 @@ if (Test-Path "$env:USERPROFILE\.claude") {
     New-Item -ItemType Directory -Force -Path $HooksDir | Out-Null
 
     # Copier les hooks PowerShell
-    foreach ($hook in @("_speak.ps1", "voice-post-tool.ps1", "voice-notification.ps1", "voice-stop.ps1")) {
+    foreach ($hook in @("_speak.ps1", "voice-post-tool.ps1", "voice-notification.ps1", "voice-stop.ps1", "jarvis_alertes.py")) {
         Copy-Item "$ScriptDir\src\claude-hooks\$hook" "$HooksDir\$hook" -Force
-        Add-Utf8Bom "$HooksDir\$hook"
+        if ($hook -like "*.ps1") { Add-Utf8Bom "$HooksDir\$hook" }
     }
     Write-Ok "Hooks installés dans $HooksDir\"
 

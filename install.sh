@@ -148,7 +148,7 @@ if [[ -d "$HOME/.claude" ]]; then
     mkdir -p "$HOOKS_DIR"
 
     # Copier les hooks
-    for hook in _speak.sh voice-post-tool.sh voice-notification.sh voice-stop.sh; do
+    for hook in _speak.sh voice-post-tool.sh voice-notification.sh voice-stop.sh jarvis_alertes.py; do
         cp "$SCRIPT_DIR/src/claude-hooks/$hook" "$HOOKS_DIR/$hook"
         chmod +x "$HOOKS_DIR/$hook"
     done

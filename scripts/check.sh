@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# check.sh — contrôle du dépôt avant commit (aucun test unitaire pour l'instant).
+# check.sh — contrôle du dépôt avant commit.
 # Rejoue les contrôles du critère de nuit : bash -n sur chaque .sh, node --check
-# sur chaque .js, pytest si un dossier tests/ existe, et git diff --check.
+# sur chaque .js, pytest si un dossier tests/ existe, unittest sur tests-unitaires/,
+# et git diff --check.
 set -u
 cd "$(dirname "$0")/.." || exit 1
 
@@ -23,6 +24,8 @@ else
     echecs=$((echecs + 1))
 fi
 [[ -d tests ]] && controler python3 -m pytest -q
+# Tests unitaires sans dépendance (pytest absent du Mac) : bibliothèque standard seulement.
+[[ -d tests-unitaires ]] && controler python3 -m unittest discover -s tests-unitaires -q
 controler git diff --check
 controler git diff --cached --check
 
