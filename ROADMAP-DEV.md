@@ -1,12 +1,12 @@
 # ROADMAP-DEV
 
-## Où j'en suis — 12/11 01:45
+## Où j'en suis — 12/11 02:10
 Résultat : Q — alertes vocales de blocage et points périodiques, à partir du superviseur K et de la file P du Cockpit
-Lot : 2/3 — Annonces bornées, déduplication et silence (C2 de la nuit du 12/11)
+Lot : 3/3 — Tests et essai sur une session de test, sans voix (C3 de la nuit du 12/11)
 Terminé quand : une session pilotée bloquée est annoncée une seule fois par `jarvis-voice`, le reste regroupé en points, rythme validé par Stéphane
-Jalons : [x] C1 reprise et roadmap [x] C2 annonces bornées, déduplication, silence [ ] C3 tests et essai sur session de test [ ] essai vocal réel et réglage du rythme avec Stéphane
-Dernier acquis : commit 7334833 — `jarvis alertes` (bash et PowerShell) et `jarvis_alertes.py`, 27 tests unitaires verts ; lecture réelle du registre K sans écriture
-Prochaine action : C3 — bloquer une session de test, observer le registre K, vérifier `jarvis alertes tick --texte` (une seule annonce), sans voix la nuit
+Jalons : [x] C1 reprise et roadmap [x] C2 annonces bornées, déduplication, silence [x] C3 tests et essai sur session de test [ ] essai vocal réel et réglage du rythme avec Stéphane
+Dernier acquis : commit e72dfa1 — C3 essai réel (session de test cmux, superviseur K sur racine isolée) : deux blocages, deux annonces uniques, silence après accord et refus ; `/clear` n'est plus pris pour un agent absent ; 30 tests verts
+Prochaine action : avec Stéphane, de jour — essai vocal réel de `jarvis alertes`, choix du rythme d'appel de `tick` et des heures de silence, puis décision sur la réconciliation installé / dépôt (R)
 Bloqué : rien ; format de la file P provisoire tant que P n'est pas livré (A7) ; écart installé / dépôt (voir Risques ouverts)
 
 ## Objectif final
@@ -46,6 +46,7 @@ Bloqué : rien ; format de la file P provisoire tant que P n'est pas livré (A7)
 - **Version installée divergente du dépôt (constaté le 12/11, lecture seule).** `~/.local/bin/jarvis` diffère de `src/jarvis.sh` (sous-commandes `lang`, `en`, `claude` et voix anglaises présentes seulement à l'installé ; `notify`, `remote`, `telegram` présentes seulement au dépôt). `_speak.sh` installé ajoute un séquenceur audio par verrou (`/tmp/jarvis_audio_lock`) et le chemin Python 3.9 ; `voice-stop.sh` installé saute l'exécution sous cron (`JARVIS_CRON=1`). `jarvis.js` est identique. `jarvis-telegram-send` n'est pas installé. Conséquence : relancer `install.sh` écraserait ces ajouts locaux. Décision de Stéphane requise avant toute réconciliation (Résultat R).
 - **Tests sans pytest.** `pytest` n'est pas installé sur le Mac : les tests vivent dans `tests-unitaires/` (bibliothèque standard, lancés par `scripts/check.sh`), pas dans `tests/`, qui ferait échouer le critère de nuit. Le critère de nuit ne les lance donc pas : seul `check.sh` les rejoue.
 - **Format de la file P provisoire.** `orchestrateur/decisions.json` est une hypothèse de `jarvis-voice` (voir `docs/ALERTES-COCKPIT.md`) ; à aligner sur le contrat de P quand il sera livré dans le Cockpit.
+- **Faux positif d'autorisation de K (constaté en C3).** Une commande longue (plus de 2 min sans écriture de transcript) est classée `autorisation_probable` par K ; `jarvis-voice` l'annonce si l'anti-rafale ne la retient pas. Correction possible côté K (heuristique) ou par un délai de confirmation ici, à décider.
 - **Rythme d'appel non installé.** Aucun cron ni boucle n'appelle `jarvis alertes tick` : le rythme et les heures de silence (défaut 22-07) sont à valider avec Stéphane.
 - **Parité bash / PowerShell** (règle de `CONTRIBUTING.md`) : toute nouveauté des hooks ou de `jarvis` doit exister en `.sh` et `.ps1`, ce qui double le coût de Q.
 

@@ -15,3 +15,10 @@ Historique des lots, en ajout seul.
 - `src/claude-hooks/jarvis_alertes.py` : lecture bornée du registre K et de la file P (provisoire), déduplication par arrêt, heures de silence, anti-rafale, points périodiques et à la demande.
 - `jarvis alertes [point|tick|etat]` en bash et en PowerShell ; installateurs mis à jour (non relancés sur le Mac).
 - `tests-unitaires/` : 27 tests, lancés par `scripts/check.sh` ; interface et règles décrites dans `docs/ALERTES-COCKPIT.md`.
+
+## 12/11/2026 — C3 : tests et essai sur une session de test, sans voix (nuit autonome, conducteur C)
+
+- Essai réel : espace cmux dédié « TEST JARVIS-VOICE C3 » (Claude Code Haiku, mode `default`), superviseur K du clone d'exécution sur une racine isolée du scratchpad, `jarvis alertes tick --texte` toutes les 10 à 15 s ; aucune voix, aucun fichier du Cockpit ni installé touché.
+- Deux boîtes d'autorisation réelles : deux annonces, une par arrêt, puis silence ; accord et refus par Échap donnent `terminee` chez K, sans annonce.
+- Écarts trouvés : `/clear` d'une autre session vu comme `processus_absent` (corrigé : surface occupée par une autre session ouverte) ; commande longue vue `autorisation_probable` par K (limite documentée).
+- Trois tests de séquences réelles ajoutés (30 au total).

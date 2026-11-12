@@ -311,5 +311,76 @@ class LigneDeCommande(unittest.TestCase):
             self.assertEqual(self.lancer(dossier, "tick", "--maintenant", ja.iso(T0)), (0, ""))
 
 
+class SequencesDeLEssaiC3(unittest.TestCase):
+    """Séquences observées le 12/11/2026 sur une session de test réelle et le registre K réel (C3)."""
+
+    SID, SURFACE, NOM = "claude_code:essai", "SURFACE-ESSAI", "TEST JARVIS-VOICE C3"
+
+    def fiche_k(self, etat, detail, arrets, ouverte=True, sid=None, surface=None, nom=None):
+        f = fiche(sid or self.SID, nom or self.NOM, etat, detail, [arret(le, cause) for le, cause in arrets], ouverte)
+        f["surface_id"] = surface or self.SURFACE
+        return f
+
+    @staticmethod
+    def a(texte):
+        return datetime.fromisoformat(f"2026-11-12T{texte}+00:00")
+
+    def passer(self, etat, moment, *fiches):
+        evenements, _ = ja.blocages(registre(*fiches), self.a(moment))
+        return ja.tick(config(), evenements, etat, self.a(moment))
+
+    def test_deux_blocages_successifs_deux_annonces_et_rien_d_autre(self):
+        ap1, fin1 = ("2026-11-12T00:47:25Z", "autorisation_probable"), ("2026-11-12T00:50:10Z", "terminee")
+        ap2, fin2 = ("2026-11-12T00:52:35Z", "autorisation_probable"), ("2026-11-12T00:53:45Z", "terminee")
+        absent = ("2026-11-12T00:55:00Z", "processus_absent")
+        sequence = [
+            ("00:46:00", self.fiche_k("en_cours", "outil_en_cours", [])),
+            ("00:47:28", self.fiche_k("inconnu", "autorisation_probable", [ap1])),
+            ("00:47:43", self.fiche_k("inconnu", "autorisation_probable", [ap1])),
+            ("00:49:00", self.fiche_k("inconnu", "autorisation_probable", [ap1])),
+            ("00:50:13", self.fiche_k("en_attente", "tour_termine", [ap1, fin1])),  # accordée
+            ("00:51:00", self.fiche_k("en_cours", "outil_en_cours", [ap1, fin1])),
+            ("00:52:35", self.fiche_k("inconnu", "autorisation_probable", [ap1, fin1, ap2])),
+            ("00:52:50", self.fiche_k("inconnu", "autorisation_probable", [ap1, fin1, ap2])),
+            ("00:53:55", self.fiche_k("en_attente", "tour_termine", [ap1, fin1, ap2, fin2])),  # refusée (Échap)
+            ("00:55:07", self.fiche_k("inactive", "processus_absent", [ap1, fin1, ap2, fin2, absent], ouverte=False)),
+        ]
+        _, etat = self.passer(None, "00:45:18")  # amorçage
+        dites = []
+        for moment, f in sequence:
+            resultat, etat = self.passer(etat, moment, f)
+            if resultat.texte:
+                dites.append((moment, resultat.texte))
+        attendu = f"Jarvis : {self.NOM} attend probablement une autorisation."
+        self.assertEqual(dites, [("00:47:28", attendu), ("00:52:35", attendu)])
+        resultat, _ = self.passer(etat, "01:15:20", sequence[-1][1])  # sortie de l'agent : au point suivant
+        self.assertEqual(resultat.texte, f"Point Jarvis : {self.NOM} n'a plus d'agent actif.")
+
+    def test_faux_blocage_repris_avant_annonce_jamais_dit(self):
+        # Une commande longue sans écriture de transcript fait croire à K à une autorisation ;
+        # retenue par l'anti-rafale, elle disparaît quand la session reprend.
+        test = self.fiche_k("inconnu", "autorisation_probable", [("2026-11-12T00:47:25Z", "autorisation_probable")])
+        longue = [("2026-11-12T00:47:58Z", "autorisation_probable")]
+        _, etat = self.passer(None, "00:45:18")
+        resultat, etat = self.passer(etat, "00:47:28", test)
+        self.assertTrue(resultat.texte)
+        autre = dict(sid="claude_code:longue", surface="S2", nom="NUIT")
+        resultat, etat = self.passer(etat, "00:48:14", test, self.fiche_k("inconnu", "autorisation_probable", longue, **autre))
+        self.assertEqual((resultat.texte, resultat.motif), ("", "anti-rafale"))
+        for moment in ("00:49:30", "00:55:00", "01:20:00"):
+            resultat, etat = self.passer(etat, moment, test, self.fiche_k("en_cours", "outil_termine", longue, **autre))
+            self.assertEqual(resultat.texte, "", moment)
+
+    def test_clear_n_est_pas_un_agent_absent(self):
+        ancienne = self.fiche_k("inactive", "processus_absent", [("2026-11-12T00:53:45Z", "processus_absent")],
+                                ouverte=False, sid="claude_code:avant-clear")
+        nouvelle = self.fiche_k("en_cours", "outil_en_cours", [], sid="claude_code:apres-clear")
+        self.assertEqual(ja.blocages(registre(ancienne, nouvelle), self.a("00:55:00"))[0], [])
+        seule, _ = ja.blocages(registre(ancienne), self.a("00:55:00"))
+        self.assertEqual([e.genre for e in seule], ["processus_absent"])
+        ailleurs = self.fiche_k("en_cours", "outil_en_cours", [], sid="claude_code:autre", surface="AUTRE")
+        self.assertEqual(len(ja.blocages(registre(ancienne, ailleurs), self.a("00:55:00"))[0]), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

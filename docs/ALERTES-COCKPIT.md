@@ -26,10 +26,12 @@ Une session qui ne travaille pas (`etat` différent de `en_cours`) et dont le de
 | `erreur` | « s'est arrêtée sur une erreur » | immédiat |
 | `interrompue` | « a été interrompue » | immédiat |
 | `silence_prolonge` (et `etat_detail` identique) | « ne donne plus signe de vie » | point |
-| `processus_absent` (oublié après 24 h) | « n'a plus d'agent actif » | point |
+| `processus_absent` (oublié après 24 h ; ignoré si la même surface cmux porte une autre session ouverte, cas d'un `/clear` ou d'une relance) | « n'a plus d'agent actif » | point |
 | décision P ouverte | « décision en attente pour <session> : <question> » | immédiat |
 
 `terminee`, `compactee` et `fermee` ne sont pas des blocages : la fin de réponse est déjà dite par `voice-stop`.
+
+Observé sur une session de test réelle (C3, 12/11/2026) : une autorisation accordée **ou refusée par Échap** donne un arrêt `terminee` chez K, donc aucune annonce de suite. Une commande longue sans écriture de transcript (plus de 2 min) est vue par K comme `autorisation_probable` : si elle reprend avant l'annonce (anti-rafale), rien n'est dit ; sinon l'annonce part, à tort. Ce faux positif vient de l'heuristique de K, pas de `jarvis-voice`.
 
 ## Déduplication
 
